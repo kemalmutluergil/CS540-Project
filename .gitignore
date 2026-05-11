@@ -1,2 +1,3 @@
 .gradio
 local_arbitration_db
+audit_log.jsonl
