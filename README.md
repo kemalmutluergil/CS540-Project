@@ -7,7 +7,7 @@
 It is highly recommended to run this within a Python virtual environment. Install the required dependencies using the following command:
 
 ```bash
-pip install torch transformers accelerate sentence-transformers chromadb gradio huggingface_hub
+pip install torch transformers accelerate sentence-transformers chromadb gradio huggingface_hub pandas
 ```
 
 To run: 
