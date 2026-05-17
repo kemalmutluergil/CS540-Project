@@ -6,6 +6,7 @@ import gradio as gr
 from datetime import datetime
 import json
 import os
+import transparency
 
 print("1. Initializing Local Database & Audit Log...")
 chroma_client = chromadb.PersistentClient(path="./local_arbitration_db")
@@ -111,8 +112,7 @@ def ask_copilot(user_query):
     metadata = all_results['metadatas'][0][valid_doc_idx]
     raw_distance = all_results['distances'][0][valid_doc_idx]
     
-    confidence_pct = max(0, min(100, round((1.0 - (raw_distance / 2.0)) * 100, 1)))
-    confidence_display = f"{confidence_pct}% (Vector Distance: {raw_distance:.4f})"
+    confidence_display = transparency.generate_retrieval_trace(metadata, raw_distance, retrieved_text)
     
     # --- FAIRNESS MODULE 2 & 3: Constraint Injection & LLM Auditing ---
     prompt = f"""You are a legal arbitration assistant. 
@@ -135,14 +135,7 @@ def ask_copilot(user_query):
     raw_output = llm_pipeline(prompt, max_new_tokens=400, return_full_text=False)[0]['generated_text']
     
     # Parse the LLM's structured output
-    try:
-        draft_part = raw_output.split("KEY DRIVERS:")[0].replace("DRAFT:", "").strip()
-        drivers_part = raw_output.split("KEY DRIVERS:")[1].split("FAIRNESS AUDIT:")[0].strip()
-        fairness_part = raw_output.split("FAIRNESS AUDIT:")[1].strip()
-    except IndexError:
-        draft_part = raw_output
-        drivers_part = "System could not extract distinct drivers."
-        fairness_part = "Audit failed to parse. Manual review required."
+    draft_part, drivers_part, fairness_part = transparency.parse_ai_reasoning(raw_output)
     
     accountability_tag = f"Source Doc: {metadata['document']}\nUploaded by: {metadata['upload_user']}"
     
@@ -175,6 +168,10 @@ def verify_and_log(user_query, original_source, ai_draft, human_edited_draft, is
 with gr.Blocks(theme=gr.themes.Soft()) as demo:
     gr.Markdown("# ⚖️ Secure Arbitration RAG Co-Pilot (Accountability Mode)")
     
+    # NEW: System Architecture Disclosure
+    system_disclosure = transparency.get_system_disclosure()
+    gr.Textbox(value=system_disclosure, label="Transparency: System Architecture", interactive=False, lines=5)
+    
     # Hidden states to hold data between functions
     hidden_query = gr.State("")
     hidden_source = gr.State("")
@@ -189,9 +186,9 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
         
         gr.Markdown("### Phase 1: Ethical AI Analysis (Explainability & Fairness)")
         with gr.Row():
-            confidence_output = gr.Textbox(label="Retrieval Confidence", interactive=False)
-            drivers_output = gr.Textbox(label="Key Drivers (Transparency)", interactive=False, lines=3)
-            fairness_output = gr.Textbox(label="Fairness Audit Score", interactive=False, lines=3)
+            confidence_output = gr.Textbox(label="Retrieval Decision Trace (Transparency)", interactive=False, lines=5)
+            drivers_output = gr.Textbox(label="Key Drivers (Transparency)", interactive=False, lines=5)
+            fairness_output = gr.Textbox(label="Fairness Audit Score", interactive=False, lines=5)
         
         gr.Markdown("### Phase 2: Review AI Draft (Accountability)")
         with gr.Row():
