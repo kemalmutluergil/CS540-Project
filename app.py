@@ -6,8 +6,6 @@ import gradio as gr
 from datetime import datetime
 import json
 import os
-import random
-import pandas as pd
 
 print("1. Initializing Local Database & Audit Log...")
 chroma_client = chromadb.PersistentClient(path="./local_arbitration_db")
@@ -20,7 +18,7 @@ embedder = SentenceTransformer("all-MiniLM-L6-v2")
 print("3. Loading Local LLM onto GPUs...")
 llm_pipeline = pipeline(
     "text-generation",
-    model="HuggingFaceH4/zephyr-7b-beta", # Changed back to zephyr-7b-beta
+    model="meta-llama/Meta-Llama-3-8B-Instruct", # Or "HuggingFaceH4/zephyr-7b-beta"
     device_map="auto", 
     dtype=torch.float16,
 )
@@ -117,25 +115,22 @@ def ask_copilot(user_query):
     confidence_display = f"{confidence_pct}% (Vector Distance: {raw_distance:.4f})"
     
     # --- FAIRNESS MODULE 2 & 3: Constraint Injection & LLM Auditing ---
-    prompt = f"""<|system|>
-You are a legal arbitration assistant. 
-FAIRNESS CONSTRAINT: You must maintain strict "Equality of Arms". Do not favor Western jurisdictions, Common Law, or large corporations over smaller entities. Base your answer strictly on the facts provided.</s>
-<|user|>
-Context: {retrieved_text}
-User Question: {user_query}
-
-You MUST format your output exactly like this:
-DRAFT:
-[Your answer here]
-
-KEY DRIVERS:
-[Explain which specific clauses drove your answer]
-
-FAIRNESS AUDIT:
-[Score your draft's neutrality from 0-100% and provide a 1-sentence justification verifying demographic parity]</s>
-<|assistant|>
-DRAFT:
-"""
+    prompt = f"""You are a legal arbitration assistant. 
+    FAIRNESS CONSTRAINT: You must maintain strict "Equality of Arms". Do not favor Western jurisdictions, Common Law, or large corporations over smaller entities. Base your answer strictly on the facts provided.
+    
+    Context: {retrieved_text}
+    User Question: {user_query}
+    
+    You MUST format your output exactly like this:
+    DRAFT:
+    [Your answer here]
+    
+    KEY DRIVERS:
+    [Explain which specific clauses drove your answer]
+    
+    FAIRNESS AUDIT:
+    [Score your draft's neutrality from 0-100% and provide a 1-sentence justification verifying demographic parity]
+    """
     
     raw_output = llm_pipeline(prompt, max_new_tokens=400, return_full_text=False)[0]['generated_text']
     
@@ -175,71 +170,6 @@ def verify_and_log(user_query, original_source, ai_draft, human_edited_draft, is
         f.write(json.dumps(audit_record) + "\n")
         
     return f"✅ SUCCESS: Exported and logged to backend at {timestamp}."
-
-# --- FAIRNESS MODULE 4: Mathematical Constraints (AIF360) ---
-def run_fairness_audit():
-    """
-    Simulates an AIF360 fairness audit on a batch of historical arbitration data
-    to calculate Demographic Parity and Equalized Odds.
-    """
-    # 1. Simulate Historical Arbitration Dataset
-    # Protected attribute A: 1 (Western/Multinational), 0 (Developing/Small Entity)
-    # Outcome Y: 1 (Favorable Ruling), 0 (Unfavorable Ruling)
-    
-    data = []
-    for _ in range(500):
-        is_western = random.choice([0, 1])
-        # In biased historical data, Western entities might have higher chance of favorable outcome (True Label)
-        # We simulate the AI's prediction
-        true_outcome = 1 if random.random() < (0.7 if is_western == 1 else 0.4) else 0
-        
-        # Simulated AI Prediction (with some error, maybe mitigating bias or not)
-        ai_prediction = true_outcome if random.random() < 0.8 else (1 - true_outcome)
-        
-        data.append({
-            "Entity_Type": "Western/Large" if is_western == 1 else "Non-Western/Small",
-            "Is_Western": is_western,
-            "True_Outcome": true_outcome,
-            "AI_Prediction": ai_prediction
-        })
-        
-    df = pd.DataFrame(data)
-    
-    # Calculate Metrics (Implementing AIF360 Logic)
-    # 1. Demographic Parity: P(Y_pred = 1 | A = 0) vs P(Y_pred = 1 | A = 1)
-    priv_pred_favorable = len(df[(df['Is_Western'] == 1) & (df['AI_Prediction'] == 1)]) / len(df[df['Is_Western'] == 1])
-    unpriv_pred_favorable = len(df[(df['Is_Western'] == 0) & (df['AI_Prediction'] == 1)]) / len(df[df['Is_Western'] == 0])
-    demographic_parity_diff = unpriv_pred_favorable - priv_pred_favorable
-    
-    # 2. Equalized Odds (True Positive Rate Difference)
-    # TPR = P(Y_pred = 1 | Y_true = 1, A)
-    priv_tpr = len(df[(df['Is_Western'] == 1) & (df['AI_Prediction'] == 1) & (df['True_Outcome'] == 1)]) / max(1, len(df[(df['Is_Western'] == 1) & (df['True_Outcome'] == 1)]))
-    unpriv_tpr = len(df[(df['Is_Western'] == 0) & (df['AI_Prediction'] == 1) & (df['True_Outcome'] == 1)]) / max(1, len(df[(df['Is_Western'] == 0) & (df['True_Outcome'] == 1)]))
-    equal_odds_diff = unpriv_tpr - priv_tpr
-    
-    # Generate Report
-    report = f"### 📊 AIF360 Fairness Metrics Audit\n\n"
-    report += f"**Dataset Size:** {len(df)} simulated historical arbitration cases.\n"
-    report += f"**Protected Attribute (A):** Geography/Size (1 = Western/Large Corporation, 0 = Non-Western/Small Entity)\n\n"
-    
-    report += f"#### 1. Demographic Parity\n"
-    report += f"P(Y = 1 | A = 0) vs P(Y = 1 | A = 1)\n\n"
-    report += f"- P(AI Prediction = Favorable | A = Western/Large): **{priv_pred_favorable:.2%}**\n"
-    report += f"- P(AI Prediction = Favorable | A = Non-Western/Small): **{unpriv_pred_favorable:.2%}**\n"
-    report += f"- **Demographic Parity Difference:** {demographic_parity_diff:.4f} *(Ideal = 0.0)*\n\n"
-    
-    report += f"#### 2. Equalized Odds (True Positive Rate)\n"
-    report += f"*Ensures the model's error rates (False Positives/Negatives) are balanced across groups.*\n\n"
-    report += f"- TPR (Western/Large): **{priv_tpr:.2%}**\n"
-    report += f"- TPR (Non-Western/Small): **{unpriv_tpr:.2%}**\n"
-    report += f"- **Equal Opportunity Difference:** {equal_odds_diff:.4f} *(Ideal = 0.0)*\n\n"
-    
-    if abs(equal_odds_diff) > 0.1:
-        report += "⚠️ **Warning:** The system exhibits bias in predictive accuracy between demographic groups. Mitigation algorithms (e.g., Reweighing or Adversarial Debiasing) should be applied to training data.\n"
-    else:
-        report += "✅ **Pass:** The system satisfies Equalized Odds constraints within an acceptable margin.\n"
-        
-    return report
 
 # --- Gradio UI Setup ---
 with gr.Blocks(theme=gr.themes.Soft()) as demo:
@@ -305,15 +235,6 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
         
         # 4. Add 'supersedes_name' to the upload inputs array
         upload_btn.click(add_document, inputs=[doc_text, doc_name, user_name, supersedes_name], outputs=[upload_status])
-
-    with gr.Tab("Fairness Metrics (AIF360)"):
-        gr.Markdown("## System-Wide Fairness Audit (Equalized Odds & Demographic Parity)")
-        gr.Markdown("This module satisfies the mathematical constraint to ensure the legal doctrine of 'Equality of Arms'. It calculates Demographic Parity and Equalized Odds to ensure the model's error rates are balanced across demographic groups (e.g., nationality of parties, Western vs. Non-Western).")
-        
-        audit_btn = gr.Button("Run Dataset Fairness Audit", variant="primary")
-        audit_results = gr.Markdown(label="AIF360 Audit Results")
-        
-        audit_btn.click(run_fairness_audit, inputs=[], outputs=[audit_results])
 
 print("4. Launching UI...")
 demo.launch(share=True)

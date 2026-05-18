@@ -7,12 +7,12 @@
 It is highly recommended to run this within a Python virtual environment. Install the required dependencies using the following command:
 
 ```bash
-pip install torch transformers accelerate sentence-transformers chromadb gradio huggingface_hub pandas
+pip install -r requirements.txt
 ```
 
 To run: 
 ```bash
-python3 app.py
+python3 test_suite.py
 ```
 
 You need an HF access token to run the default Llama model, you can use another model like zephyr that does not require a token by changig the following line:
