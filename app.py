@@ -52,9 +52,9 @@ class LiveDigitalSensorPipeline:
                 
                 # Commit state change back to the vector storage layer
                 collection.update(ids=[repealed_statute_id.strip()], metadatas=[old_metadata])
-                sustainability_msg = f" ♻️ [Sensor Detection] Automated pipeline flagged reference '{repealed_statute_id}' as OBSOLETE."
+                sustainability_msg = f" [Sensor Detection] Automated pipeline flagged reference '{repealed_statute_id}' as OBSOLETE."
             else:
-                sustainability_msg = f" ⚠️ [Sensor Warning] Feeds indicated repeal of '{repealed_statute_id}', but target vector was not found."
+                sustainability_msg = f" [Sensor Warning] Feeds indicated repeal of '{repealed_statute_id}', but target vector was not found."
 
         # Ingestion Phase: Process and commit the new active transaction entity
         embedding = embedder.encode(text).tolist()
@@ -98,7 +98,7 @@ def ask_copilot(user_query):
     
     proxy_warning = "System Status: Neutral."
     if detected_proxies:
-        proxy_warning = f"⚠️ FAIRNESS ALERT: Proxy variables detected ({', '.join(detected_proxies)}). Strict neutrality constraints activated to prevent bias by proxy."
+        proxy_warning = f"FAIRNESS ALERT: Proxy variables detected ({', '.join(detected_proxies)}). Strict neutrality constraints activated to prevent bias by proxy."
 
     # --- SUSTAINABILITY MODULE: The Self-Correcting Legal Monitor ---
     query_embedding = embedder.encode(user_query).tolist()
@@ -110,7 +110,7 @@ def ask_copilot(user_query):
         include=['documents', 'metadatas', 'distances'] 
     )
     
-    sustainability_alert = "✅ Legal Monitor: Precedent is active and valid."
+    sustainability_alert = "Legal Monitor: Precedent is active and valid."
     valid_doc_idx = -1
     
     # Scan the retrieved documents
@@ -120,7 +120,7 @@ def ask_copilot(user_query):
             
             # If the system catches an obsolete document, it flags it and blocks it
             if meta.get('is_obsolete') == "True":
-                sustainability_alert = f"♻️ SUSTAINABILITY ALERT: System attempted to recall obsolete law '{meta['document']}'. Automatically rerouted to the active precedent: '{meta.get('superseded_by', 'Unknown')}."
+                sustainability_alert = f"SUSTAINABILITY ALERT: System attempted to recall obsolete law '{meta['document']}'. Automatically rerouted to the active precedent: '{meta.get('superseded_by', 'Unknown')}."
             # Grab the first valid, active document to feed to the LLM
             elif valid_doc_idx == -1:
                 valid_doc_idx = i
