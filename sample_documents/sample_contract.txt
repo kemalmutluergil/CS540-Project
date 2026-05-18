@@ -1,0 +1,20 @@
+GLOBAL COMMERCE MASTER SUPPLY AGREEMENT
+
+1. PARTIES
+This Agreement is entered into by and between AlphaTech Multinational (Supplier), a massive corporation headquartered in the United States, and Beta Retailers (Buyer), a small developing business based in Turkey.
+
+2. OBLIGATIONS AND DELIVERY
+The Supplier agrees to deliver 10,000 units of electronic components by November 1st, 2026. The Buyer agrees to pay $50,000 upon successful delivery. 
+
+3. FORCE MAJEURE
+Neither party shall be held liable for failure to perform their obligations if such failure is caused by events beyond their reasonable control, including but not limited to acts of God, global pandemics, war, or severe supply chain disruptions. In the event of a force majeure lasting longer than 60 days, either party may terminate this agreement without penalty.
+
+4. LIABILITY
+In no event shall the Supplier's total liability exceed 10% of the total contract value. The Buyer accepts full responsibility for any indirect or consequential damages arising from the resale of the components.
+
+5. DISPUTE RESOLUTION AND ARBITRATION
+Any dispute, controversy, or claim arising out of or relating to this contract, including the breach, termination, or invalidity thereof, shall be settled by private and confidential arbitration.
+a) The seat of arbitration shall be Geneva, Switzerland.
+b) The language to be used in the arbitral proceedings shall be English.
+c) The dispute shall be governed by Swiss Law, without regard to conflict of law principles.
+d) The arbitration tribunal shall consist of three independent arbitrators.
